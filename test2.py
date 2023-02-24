@@ -2,8 +2,6 @@ import pandas as pd
 import openpyxl as op
 import os
 import errno
-from habanero import Crossref
-from pybtex.database.input import bibtex
 
 class Article:
     def __init__(self,title:str,abstract:str) -> None:
@@ -19,12 +17,6 @@ class BibFile:
         for linea in archivo:
             linea = linea.strip()
             if(linea.startswith('@')): #nuevo articulo
-                if linea.startswith('@ARTICLE'):
-                    key = linea[9:-1]
-                    print(key)
-                if linea.startswith('@BOOK'):
-                    key = linea[6:-1]
-                    print(key)
                 if(tmp_article['title']=='' or tmp_article['abstract']==''):
                     tmp_article = {'title':'','abstract':''}
                 elif (tmp_article['title']!='' and tmp_article['abstract']!=''):
@@ -51,7 +43,6 @@ def generar_matriz_clasificacion(matriz,lista_palabras,list_key_words):
             listKey = []
             for palabra in list_key:
                 listKey.append(palabra.strip('.').strip())
-
             for pa in listKey:
                 listTwo = pa.split(' ')
                 primeraPalabra = listTwo[0]
@@ -121,18 +112,17 @@ def buscar_paper_sin_doi(list_archivos_bib):
             arch.writelines(lines)
     return list_doi
 
-def generar_excel(encabezado=(),contenido=[],titulo='Clasificacion',directorio='matrices'):
+def generar_excel(encabezado=(),contenido=[],titulo='Clasificacion',directorio='matrices',name_archivo='newsDoi'):
     wb = op.Workbook()
     hoja = wb.active
     hoja.title = titulo
     hoja.append(encabezado)
     for i in range(len(contenido)):
         hoja.append(contenido[i])
-    ar = archivo.split('.')
-    print('### Generando Archivo {0}\n'.format(ar[0] + '.xlsx'))
+    print('### Generando Archivo {0}\n'.format(name_archivo + '.xlsx'))
     directorio_matrices = directorio
     crear_directorio(directorio_matrices)
-    wb.save('./' + directorio_matrices + '/' + ar[0] + '.xlsx')
+    wb.save('./' + directorio_matrices + '/' + name_archivo + '.xlsx')
 
 
 os.system('cls' if os.name == 'nt' else 'clear')
@@ -177,9 +167,10 @@ for archivo in lista_archivos:
     # Arma el archivo de excel con la matriz padre de clasificacion
     encabezado_excel = ('Titulos Papers',)+tuple(list_category)
     list_contenido_excel = []
+    ar = archivo.split('.')
     for i in range(len(list_paper)):
         list_contenido_excel.append((list_paper[i],)+tuple(matriz_general[i]))
-    generar_excel(encabezado=encabezado_excel,contenido=list_contenido_excel)
+    generar_excel(encabezado=encabezado_excel,contenido=list_contenido_excel,name_archivo=ar[0])
 
 print('############ Archivos de clasificacion Generados Exitosamente! ############\n')
 
