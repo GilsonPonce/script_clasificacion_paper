@@ -94,6 +94,9 @@ def buscar_paper_sin_doi(list_archivos_bib):
                 info_para_excel.append(namearch)
             if linea.startswith('doi'):
                 have_doi = True
+                info_para_excel.append(linea[4:-2])
+                info_para_excel.reverse()
+                list_doi.append(tuple(info_para_excel))
             if linea.startswith('@'):  # nuevo articulo
                 if not have_doi and indexlitle > 0:
                     newdoi = "entrysndoi-0000%s" % str(secuencia)
