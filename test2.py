@@ -80,6 +80,54 @@ def crear_directorio(nombre):
         if e.errno != errno.EEXIST:
             raise
 
+def buscar_paper_sin_doi(list_archivos_bib):
+    secuencia = 1
+    list_doi = []
+    for namearch in list_archivos_bib:
+        info_para_excel = []
+        have_doi = False
+        indexline = 0
+        indexlitle = 0
+        conteo_por_archivo = 0
+        lines = []
+        archivo = open(namearch, 'r', encoding='utf-8')
+        for linea in archivo:
+            indexline += 1
+            linea = linea.strip()
+            lines.append(linea + "\n")
+            if linea.startswith('title'):
+                indexlitle = indexline
+                info_para_excel.append(namearch)
+                info_para_excel.append(linea[7:-2])
+            if linea.startswith('doi'):
+                have_doi = True
+            if linea.startswith('@'):  # nuevo articulo
+                if not have_doi and indexlitle > 0:
+                    nueva_linea = "doi={entrysndoi-0000%s},\n" % str(secuencia)
+                    lines.insert(indexlitle + conteo_por_archivo, nueva_linea)
+                    secuencia += 1
+                    conteo_por_archivo += 1
+                    info_para_excel.append()
+                indexlitle = 0
+                have_doi = False
+        archivo.close()
+
+        with open(namearch, "w", encoding='utf-8') as arch:
+            arch.writelines(lines)
+
+def generar_excel():
+    wb = op.Workbook()
+    hoja = wb.active
+    hoja.title = "Clasificacion"
+    hoja.append(('Titulos Papers',) + tuple(list_category))
+    for i in range(len(list_paper)):
+        hoja.append((list_paper[i],) + tuple(matriz_general[i]))
+    ar = archivo.split('.')
+    print('Generando Archivo de clasificacion {0}\n'.format(ar[0] + '.xlsx'))
+    directorio_matrices = 'matrices'
+    crear_directorio(directorio_matrices)
+    wb.save('./' + directorio_matrices + '/' + ar[0] + '.xlsx')
+
 
 os.system('cls' if os.name == 'nt' else 'clear')
 lista_archivos = []
@@ -90,12 +138,14 @@ for arch in os.listdir('./'):
         print('Archivo encontrado {0}\n'.format(arch))
         lista_archivos.append(arch)
 
+print('########## BUSCANDO PAPER SIN DOI ###########')
+
+
 #Lee el archivo de categorias
 print('Cargando Categorias y Key words del archivo Field categories.xlsx\n')
 excel_data_df = pd.read_excel("Field categories.xlsx")
 list_category = excel_data_df['Indicator name'].tolist() #extraigo los indicadores
 list_key_words = excel_data_df['Key words'].tolist() # extraigo una lista de los keywords de cada indicador
-
 
 for archivo in lista_archivos:
     list_paper = [] #contienen los titulos de cada paper
