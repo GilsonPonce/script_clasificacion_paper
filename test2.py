@@ -81,8 +81,10 @@ def crear_directorio(nombre):
             raise
 
 def buscar_paper_sin_doi(list_archivos_bib):
-    secuencia = 1
     list_doi = []
+    if len(list_archivos_bib) == 0:
+        return list_doi
+    secuencia = 1
     for namearch in list_archivos_bib:
         info_para_excel = []
         have_doi = False
@@ -97,34 +99,38 @@ def buscar_paper_sin_doi(list_archivos_bib):
             lines.append(linea + "\n")
             if linea.startswith('title'):
                 indexlitle = indexline
-                info_para_excel.append(namearch)
                 info_para_excel.append(linea[7:-2])
+                info_para_excel.append(namearch)
             if linea.startswith('doi'):
                 have_doi = True
             if linea.startswith('@'):  # nuevo articulo
                 if not have_doi and indexlitle > 0:
-                    nueva_linea = "doi={entrysndoi-0000%s},\n" % str(secuencia)
+                    newdoi = "entrysndoi-0000%s" % str(secuencia)
+                    nueva_linea = "doi={%s},\n" % newdoi
                     lines.insert(indexlitle + conteo_por_archivo, nueva_linea)
                     secuencia += 1
                     conteo_por_archivo += 1
-                    info_para_excel.append()
+                    info_para_excel.append(newdoi)
+                    info_para_excel.reverse()
+                    list_doi.append(tuple(info_para_excel))
                 indexlitle = 0
                 have_doi = False
+                info_para_excel.clear()
         archivo.close()
-
         with open(namearch, "w", encoding='utf-8') as arch:
             arch.writelines(lines)
+    return list_doi
 
-def generar_excel():
+def generar_excel(encabezado=(),contenido=[],titulo='Clasificacion',directorio='matrices'):
     wb = op.Workbook()
     hoja = wb.active
-    hoja.title = "Clasificacion"
-    hoja.append(('Titulos Papers',) + tuple(list_category))
-    for i in range(len(list_paper)):
-        hoja.append((list_paper[i],) + tuple(matriz_general[i]))
+    hoja.title = titulo
+    hoja.append(encabezado)
+    for i in range(len(contenido)):
+        hoja.append(contenido[i])
     ar = archivo.split('.')
-    print('Generando Archivo de clasificacion {0}\n'.format(ar[0] + '.xlsx'))
-    directorio_matrices = 'matrices'
+    print('### Generando Archivo {0}\n'.format(ar[0] + '.xlsx'))
+    directorio_matrices = directorio
     crear_directorio(directorio_matrices)
     wb.save('./' + directorio_matrices + '/' + ar[0] + '.xlsx')
 
@@ -139,7 +145,10 @@ for arch in os.listdir('./'):
         lista_archivos.append(arch)
 
 print('########## BUSCANDO PAPER SIN DOI ###########')
-
+lista_doi_nuevos = buscar_paper_sin_doi(lista_archivos)
+if len(lista_doi_nuevos) > 0:
+    encabezado_excel_doi = ('Nuevo Doi','Nombre del Archivo','Titulo del Paper')
+    generar_excel(encabezado=encabezado_excel_doi,contenido=lista_doi_nuevos,titulo="NuevosDOI",directorio='DOI')
 
 #Lee el archivo de categorias
 print('Cargando Categorias y Key words del archivo Field categories.xlsx\n')
@@ -166,18 +175,11 @@ for archivo in lista_archivos:
         matriz_general.append(matriz)
 
     # Arma el archivo de excel con la matriz padre de clasificacion
-    wb = op.Workbook()
-    hoja = wb.active
-    hoja.title = "Clasificacion"
-    hoja.append(('Titulos Papers',)+tuple(list_category))
+    encabezado_excel = ('Titulos Papers',)+tuple(list_category)
+    list_contenido_excel = []
     for i in range(len(list_paper)):
-        hoja.append((list_paper[i],)+tuple(matriz_general[i]))
-    ar = archivo.split('.')
-    print('Generando Archivo de clasificacion {0}\n'.format(ar[0] + '.xlsx'))
-    directorio_matrices = 'matrices'
-    crear_directorio(directorio_matrices)
-    wb.save('./'+directorio_matrices+'/'+ar[0]+'.xlsx')
-
+        list_contenido_excel.append((list_paper[i],)+tuple(matriz_general[i]))
+    generar_excel(encabezado=encabezado_excel,contenido=list_contenido_excel)
 
 print('############ Archivos de clasificacion Generados Exitosamente! ############\n')
 
