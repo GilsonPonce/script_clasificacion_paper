@@ -13,7 +13,6 @@ class BibFile:
         self.articles:list[Article] = []
         archivo = open(file_name,'r',encoding='utf-8')
         tmp_article = {'title':'','abstract':''}
-        have_doi = False
         for linea in archivo:
             linea = linea.strip()
             if(linea.startswith('@')): #nuevo articulo
@@ -71,59 +70,72 @@ def crear_directorio(nombre):
         if e.errno != errno.EEXIST:
             raise
 
-def buscar_paper_sin_doi(list_archivos_bib):
+def buscar_paper_sin_doi(namearch,secuencia=1):
     list_doi = []
-    if len(list_archivos_bib) == 0:
+    if namearch == '':
         return list_doi
-    secuencia = 1
-    for namearch in list_archivos_bib:
-        info_para_excel = []
-        have_doi = False
-        indexline = 0
-        indexlitle = 0
-        conteo_por_archivo = 0
-        lines = []
-        archivo = open(namearch, 'r', encoding='utf-8')
-        for linea in archivo:
-            indexline += 1
-            linea = linea.strip()
-            lines.append(linea + "\n")
-            if linea.startswith('title'):
-                indexlitle = indexline
-                info_para_excel.append(linea[7:-2])
-                info_para_excel.append(namearch)
-            if linea.startswith('doi'):
-                have_doi = True
-                info_para_excel.append(linea[5:-2])
+    info_para_excel = []
+    have_doi = False
+    indexline = 0
+    indexlitle = 0
+    conteo_por_archivo = 0
+    lines = []
+    archivo = open(namearch, 'r', encoding='utf-8')
+    for linea in archivo:
+        indexline += 1
+        linea = linea.strip()
+        lines.append(linea + "\n")
+        if linea.startswith('title'):
+            indexlitle = indexline
+            info_para_excel.append(linea[7:-2])
+            info_para_excel.append(namearch)
+        if linea.startswith('doi'):
+            have_doi = True
+            info_para_excel.append(linea[5:-2])
+            info_para_excel.reverse()
+            list_doi.append(tuple(info_para_excel))
+        if linea.startswith('@'):  # nuevo articulo
+            if not have_doi and indexlitle > 0:
+                newdoi = "entrysndoi-0000%s" % str(secuencia)
+                nueva_linea = "doi={%s},\n" % newdoi
+                lines.insert(indexlitle + conteo_por_archivo, nueva_linea)
+                secuencia += 1
+                conteo_por_archivo += 1
+                info_para_excel.append(newdoi)
                 info_para_excel.reverse()
                 list_doi.append(tuple(info_para_excel))
-            if linea.startswith('@'):  # nuevo articulo
-                if not have_doi and indexlitle > 0:
-                    newdoi = "entrysndoi-0000%s" % str(secuencia)
-                    nueva_linea = "doi={%s},\n" % newdoi
-                    lines.insert(indexlitle + conteo_por_archivo, nueva_linea)
-                    secuencia += 1
-                    conteo_por_archivo += 1
-                    info_para_excel.append(newdoi)
-                    info_para_excel.reverse()
-                    list_doi.append(tuple(info_para_excel))
-                indexlitle = 0
-                have_doi = False
-                info_para_excel.clear()
-        archivo.close()
-        with open(namearch, "w", encoding='utf-8') as arch:
-            arch.writelines(lines)
-    return list_doi
+            indexlitle = 0
+            have_doi = False
+            info_para_excel.clear()
+    archivo.close()
 
-def generar_excel(encabezado=(),contenido=[],titulo='Clasificacion',directorio='matrices',name_archivo='newsDoi'):
+    with open(namearch, "w", encoding='utf-8') as arch:
+        arch.writelines(lines)
+    return list_doi,secuencia
+
+def generar_excel(encabezado=[],contenido={},name_archivo='archivo'):
+    if len(encabezado) == 0:
+        return
+    if len(contenido) == 0:
+        return
     wb = op.Workbook()
-    hoja = wb.active
-    hoja.title = titulo
-    hoja.append(encabezado)
-    for i in range(len(contenido)):
-        hoja.append(contenido[i])
+    for key in contenido:
+        if key == 'papers':
+            hoja = wb.active
+            hoja.title = "CLASIFICACION"
+            hoja.append(encabezado[0])
+            for i in range(len(contenido[key])):
+                hoja.append(contenido[key][i])
+        if key == 'dois':
+            hojadois = wb.create_sheet("DOIS")
+            hojadois.append(encabezado[1])
+            hojadois.column_dimensions['A'].width = 36
+            hojadois.column_dimensions['B'].width = 19
+            hojadois.column_dimensions['C'].width = 249
+            for i in range(len(contenido[key])):
+                hojadois.append(contenido[key][i])
     print('### Generando Archivo {0}\n'.format(name_archivo + '.xlsx'))
-    directorio_matrices = directorio
+    directorio_matrices = 'MATRICES'
     crear_directorio(directorio_matrices)
     wb.save('./' + directorio_matrices + '/' + name_archivo + '.xlsx')
 
@@ -137,21 +149,18 @@ for arch in os.listdir('./'):
         print('Archivo encontrado {0}\n'.format(arch))
         lista_archivos.append(arch)
 
-print('########## BUSCANDO PAPER SIN DOI ###########')
-lista_doi_nuevos = buscar_paper_sin_doi(lista_archivos)
-if len(lista_doi_nuevos) > 0:
-    encabezado_excel_doi = ('Nuevo Doi','Nombre del Archivo','Titulo del Paper')
-    generar_excel(encabezado=encabezado_excel_doi,contenido=lista_doi_nuevos,titulo="NuevosDOI",directorio='DOI')
-
 #Lee el archivo de categorias
 print('Cargando Categorias y Key words del archivo Field categories.xlsx\n')
 excel_data_df = pd.read_excel("Field categories.xlsx")
 list_category = excel_data_df['Indicator name'].tolist() #extraigo los indicadores
 list_key_words = excel_data_df['Key words'].tolist() # extraigo una lista de los keywords de cada indicador
 
+secuencia = 1
 for archivo in lista_archivos:
     list_paper = [] #contienen los titulos de cada paper
     matriz_general = [] #matriz de clasificacion padre
+    print('########## BUSCANDO PAPER SIN DOI ###########')
+    lista_doi, secuencia = buscar_paper_sin_doi(archivo,secuencia)
     bib = BibFile(archivo)
     for articulo in bib.articles:
         print('Leyendo articulo {0}\n'.format(articulo.title))
@@ -168,12 +177,17 @@ for archivo in lista_archivos:
         matriz_general.append(matriz)
 
     # Arma el archivo de excel con la matriz padre de clasificacion
-    encabezado_excel = ('Titulos Papers',)+tuple(list_category)
+    encabezado_excel = [('Titulos Papers',)+tuple(list_category)]
     list_contenido_excel = []
     ar = archivo.split('.')
     for i in range(len(list_paper)):
         list_contenido_excel.append((list_paper[i],)+tuple(matriz_general[i]))
-    generar_excel(encabezado=encabezado_excel,contenido=list_contenido_excel,name_archivo=ar[0])
+    diccionario_contenido = {}
+    diccionario_contenido['papers'] = list_contenido_excel
+    if (lista_doi) != 0:
+        encabezado_excel.append(('Doi','Nombre del Archivo','Titulo del Paper'))
+        diccionario_contenido['dois'] = lista_doi
+    generar_excel(encabezado=encabezado_excel,contenido=diccionario_contenido,name_archivo=ar[0])
 
 print('############ Archivos de clasificacion Generados Exitosamente! ############\n')
 
