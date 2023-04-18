@@ -2,6 +2,7 @@ import pandas as pd
 import openpyxl as op
 import os
 import errno
+import sys
 
 class Article:
     def __init__(self,title:str,abstract:str) -> None:
@@ -144,6 +145,20 @@ def generar_excel(encabezado=[],contenido={},name_archivo='archivo'):
     crear_directorio(directorio_matrices)
     wb.save('./' + directorio_matrices + '/' + name_archivo + '.xlsx')
 
+def escribir_archivo_ultimo_doi_generado(secuencia):
+    archivo = open("ultimodoi.text","w")
+    archivo.write(str(secuencia))
+    archivo.close()
+
+def leer_archivo_ultimo_doi_generado():
+    ruta_archivo = "./ultimodoi.text"
+    secuencia = 0
+    if os.path.exists(ruta_archivo):
+        archivo = open("ultimodoi.text","r")
+        secuencia_arch = archivo.readline().strip()
+        if secuencia_arch :
+            secuencia = int(secuencia_arch)
+    return secuencia
 
 os.system('cls' if os.name == 'nt' else 'clear')
 lista_archivos = []
@@ -161,11 +176,25 @@ list_category = excel_data_df['Indicator name'].tolist() #extraigo los indicador
 list_key_words = excel_data_df['Key words'].tolist() # extraigo una lista de los keywords de cada indicador
 
 secuencia = 1
+
+if len(sys.argv) > 1:
+    numero = sys.argv[1]
+    ultimo = int(numero)
+    secuencia = ultimo + 1
+
+secuencia_archivo = leer_archivo_ultimo_doi_generado()
+if secuencia_archivo != 0 and len(sys.argv) <= 1:
+    secuencia = secuencia_archivo + 1
+
 for archivo in lista_archivos:
     list_paper = [] #contienen los titulos de cada paper
     matriz_general = [] #matriz de clasificacion padre
     print('########## BUSCANDO PAPER SIN DOI ###########')
-    lista_doi, secuencia = buscar_paper_sin_doi(archivo,secuencia)
+    lista_doi, ultima_secuencia = buscar_paper_sin_doi(archivo,secuencia)
+    if ultima_secuencia == secuencia:
+        escribir_archivo_ultimo_doi_generado(secuencia= ultima_secuencia-1)
+    else:
+        escribir_archivo_ultimo_doi_generado(secuencia=ultima_secuencia)
     bib = BibFile(archivo)
     for articulo in bib.articles:
         print('Leyendo articulo {0}\n'.format(articulo.title))
