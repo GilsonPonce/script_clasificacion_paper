@@ -146,15 +146,15 @@ def generar_excel(encabezado=[],contenido={},name_archivo='archivo'):
     wb.save('./' + directorio_matrices + '/' + name_archivo + '.xlsx')
 
 def escribir_archivo_ultimo_doi_generado(secuencia):
-    archivo = open("ultimodoi.text","w")
+    archivo = open("ultimodoi.txt","w")
     archivo.write(str(secuencia))
     archivo.close()
 
 def leer_archivo_ultimo_doi_generado():
-    ruta_archivo = "./ultimodoi.text"
+    ruta_archivo = "./ultimodoi.txt"
     secuencia = 0
     if os.path.exists(ruta_archivo):
-        archivo = open("ultimodoi.text","r")
+        archivo = open("ultimodoi.txt","r")
         secuencia_arch = archivo.readline().strip()
         if secuencia_arch :
             secuencia = int(secuencia_arch)
