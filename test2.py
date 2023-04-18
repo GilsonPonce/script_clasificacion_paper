@@ -224,7 +224,7 @@ for archivo in lista_archivos:
         diccionario_contenido['dois'] = lista_doi
     generar_excel(encabezado=encabezado_excel,contenido=diccionario_contenido,name_archivo=ar[0])
 
-print('############ Archivos de clasificacion Generados Exitosamente! ############\n')
+print('############# Archivos de clasificacion Generados Exitosamente! #############\n')
 
       
         
