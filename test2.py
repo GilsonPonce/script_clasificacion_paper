@@ -10,27 +10,23 @@ class Article:
         self.abstract = abstract
 
 class BibFile:
-    def __init__(self,file_name:str) -> None:
+    def __init__(self,file_name:str,total_lineas:int) -> None:
         self.articles:list[Article] = []
         archivo = open(file_name,'r',encoding='utf-8')
         tmp_article = {'title':'','abstract':''}
+        conteo = 0
         for linea in archivo:
+            conteo += 1
             linea = linea.strip()
-            if(linea.startswith('@')): #nuevo articulo
-                if(tmp_article['title']=='' or tmp_article['abstract']==''):
-                    tmp_article = {'title':'','abstract':''}
-                elif (tmp_article['title']!='' and tmp_article['abstract']!=''):
-                    self.articles.append(Article(tmp_article['title'],tmp_article['abstract']))
-                    tmp_article = {'title':'','abstract':''}
+            if(linea.startswith('@') or conteo == total_lineas):#nuevo articulo
+                self.articles.append(Article(tmp_article['title'],tmp_article['abstract']))
+                tmp_article = {'title':'','abstract':''}
             elif(linea.startswith('title')):
                 tmp_title = linea[7:-2]
                 tmp_article['title']=tmp_title
             elif(linea.startswith('abstract')):
                 tmp_abstract = linea[10:-2]
                 tmp_article['abstract']=tmp_abstract
-            elif(linea.startswith('doi')):
-                have_doi = True
-
         archivo.close()
         self.articles.append(Article(tmp_article['title'],tmp_article['abstract']))
 
@@ -71,6 +67,13 @@ def crear_directorio(nombre):
         if e.errno != errno.EEXIST:
             raise
 
+def total_lineas(namearch):
+    totalLineas = 0
+    with open(namearch, "r", encoding='utf-8') as arch:
+        for linea in arch:
+            totalLineas += 1
+    return totalLineas
+
 def buscar_paper_sin_doi(namearch,secuencia=1):
     list_doi = []
     if namearch == '':
@@ -81,11 +84,8 @@ def buscar_paper_sin_doi(namearch,secuencia=1):
     indexlitle = 0
     conteo_por_archivo = 0
     lines = []
-    totalLineas = 0
+    totalLineas = total_lineas(namearch)
     conteo_lineas =0
-    with open(namearch, "r", encoding='utf-8') as arch:
-        for linea in arch:
-            totalLineas += 1
     archivo = open(namearch, 'r', encoding='utf-8')
     for linea in archivo:
         conteo_lineas += 1
@@ -195,7 +195,8 @@ for archivo in lista_archivos:
         escribir_archivo_ultimo_doi_generado(secuencia= ultima_secuencia-1)
     else:
         escribir_archivo_ultimo_doi_generado(secuencia=ultima_secuencia)
-    bib = BibFile(archivo)
+    totalineasarch = total_lineas(archivo)
+    bib = BibFile(archivo,totalineasarch)
     for articulo in bib.articles:
         print('Leyendo articulo {0}\n'.format(articulo.title))
         list_paper.append(articulo.title) #agrego a la lista el titulo
