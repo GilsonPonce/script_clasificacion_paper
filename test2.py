@@ -195,6 +195,7 @@ for archivo in lista_archivos:
         escribir_archivo_ultimo_doi_generado(secuencia= ultima_secuencia-1)
     else:
         escribir_archivo_ultimo_doi_generado(secuencia=ultima_secuencia)
+    secuencia = ultima_secuencia
     totalineasarch = total_lineas(archivo)
     bib = BibFile(archivo,totalineasarch)
     for articulo in bib.articles:
