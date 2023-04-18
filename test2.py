@@ -80,8 +80,14 @@ def buscar_paper_sin_doi(namearch,secuencia=1):
     indexlitle = 0
     conteo_por_archivo = 0
     lines = []
+    totalLineas = 0
+    conteo_lineas =0
+    with open(namearch, "r", encoding='utf-8') as arch:
+        for linea in arch:
+            totalLineas += 1
     archivo = open(namearch, 'r', encoding='utf-8')
     for linea in archivo:
+        conteo_lineas += 1
         indexline += 1
         linea = linea.strip()
         lines.append(linea + "\n")
@@ -94,7 +100,7 @@ def buscar_paper_sin_doi(namearch,secuencia=1):
             info_para_excel.append(linea[5:-2])
             info_para_excel.reverse()
             list_doi.append(tuple(info_para_excel))
-        if linea.startswith('@'):  # nuevo articulo
+        if linea.startswith('@') or conteo_lineas == totalLineas:  # nuevo articulo
             if not have_doi and indexlitle > 0:
                 newdoi = "entrysndoi-0000%s" % str(secuencia)
                 nueva_linea = "doi={%s},\n" % newdoi
@@ -108,7 +114,6 @@ def buscar_paper_sin_doi(namearch,secuencia=1):
             have_doi = False
             info_para_excel.clear()
     archivo.close()
-
     with open(namearch, "w", encoding='utf-8') as arch:
         arch.writelines(lines)
     return list_doi,secuencia
